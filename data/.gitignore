@@ -2,3 +2,5 @@
 /adult.names
 /adult.test
 /heart_df.parquet
+/processed_train.csv
+/processed_test.csv

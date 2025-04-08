@@ -1,71 +1,86 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import yaml
+import os
 
-# Load parameters
+# Column names for the adult dataset
+COLUMNS = [
+    'age', 'workclass', 'fnlwgt', 'education', 'education-num',
+    'marital-status', 'occupation', 'relationship', 'race', 'sex',
+    'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income'
+]
+
+# Load parameters from params.yaml
 try:
     with open("params.yaml", 'r') as f:
         params = yaml.safe_load(f)['preprocessing']
 except:
     params = {
         'test_size': 0.2,
-        'val_size': 0.2,
-        'random_state': 42
+        'random_state': 42,
+        'input_path': 'data/adult.data',
+        'train_output_path': 'data/processed_train.csv',
+        'test_output_path': 'data/processed_test.csv'
     }
 
-def create_preprocessing_pipeline(categorical_cols, numerical_cols):
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-    ])
+def load_data(filepath):
+    """Load the raw dataset"""
+    # Read CSV without headers and assign column names
+    df = pd.read_csv(filepath, header=None, names=COLUMNS)
+    # Clean whitespace from string columns
+    object_columns = df.select_dtypes(include=['object']).columns
+    df[object_columns] = df[object_columns].apply(lambda x: x.str.strip())
+    return df
+
+def preprocess_data(df):
+    """Preprocess the data"""
+    # Handle missing values (represented as '?')
+    df = df.replace('?', np.nan)
+    df = df.dropna()
     
-    numerical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
-    ])
+    # Convert categorical variables
+    categorical_columns = df.select_dtypes(include=['object']).columns
+    df = pd.get_dummies(df, columns=list(set(categorical_columns) - {'income'}))
     
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numerical_transformer, numerical_cols),
-            ('cat', categorical_transformer, categorical_cols)
-        ])
+    # Scale numerical features
+    scaler = StandardScaler()
+    numerical_columns = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
+    df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
     
-    return preprocessor
+    return df
+
+def split_and_save_data(df):
+    """Split the data and save train/test sets"""
+    # Clean target variable
+    df['income'] = df['income'].map({'>50K': 1, '<=50K': 0})
+    
+    X = df.drop('income', axis=1)
+    y = df['income']
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, 
+        test_size=params['test_size'],
+        random_state=params['random_state']
+    )
+    
+    # Save processed datasets
+    train_data = pd.concat([X_train, y_train], axis=1)
+    test_data = pd.concat([X_test, y_test], axis=1)
+    
+    # Create data directory if it doesn't exist
+    os.makedirs(os.path.dirname(params['train_output_path']), exist_ok=True)
+    
+    train_data.to_csv(params['train_output_path'], index=False)
+    test_data.to_csv(params['test_output_path'], index=False)
 
 if __name__ == "__main__":
-    # Load data
-    heart_df = pd.read_parquet('data/heart_df.parquet')
+    # Load raw data
+    raw_data = load_data(params['input_path'])
     
-    # Split features and target
-    X = heart_df.drop('HeartDisease', axis=1)
-    y = heart_df['HeartDisease']
+    # Preprocess
+    processed_data = preprocess_data(raw_data)
     
-    # Get column types
-    categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
-    numerical_cols = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    
-    # Create train/val/test splits
-    X_temp, X_test, y_temp, y_test = train_test_split(
-        X, y, 
-        test_size=params['test_size'], 
-        random_state=params['random_state']
-    )
-    
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_temp, y_temp, 
-        test_size=params['val_size'], 
-        random_state=params['random_state']
-    )
-    
-    # Save splits
-    X_train.to_parquet('data/X_train.parquet')
-    X_val.to_parquet('data/X_val.parquet')
-    X_test.to_parquet('data/X_test.parquet')
-    pd.Series(y_train).to_csv('data/y_train.csv')
-    pd.Series(y_val).to_csv('data/y_val.csv')
-    pd.Series(y_test).to_csv('data/y_test.csv')
+    # Split and save
+    split_and_save_data(processed_data)

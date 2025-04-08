@@ -13,3 +13,14 @@ stages:
       - features.chi2percentile
       - features.train_path
       - features.test_path
+  preprocess:
+    cmd: python src/preprocessing.py
+    deps:
+      - data/adult.data
+      - src/preprocessing.py
+    params:
+      - preprocessing.test_size
+      - preprocessing.random_state
+    outs:
+      - data/processed_train.csv
+      - data/processed_test.csv

@@ -1,3 +1,6 @@
 preprocessing:
     test_size: 0.2
     random_state: 42
+    input_path: data/adult.data
+    train_output_path: data/processed_train.csv
+    test_output_path: data/processed_test.csv
