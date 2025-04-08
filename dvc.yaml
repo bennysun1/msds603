@@ -1,15 +1,12 @@
 stages:
-  preprocess:
+  prepare:
     cmd: python src/preprocessing.py
     deps:
-      - data/adult.data
+      - data/heart_df.parquet
       - src/preprocessing.py
     params:
       - preprocessing.test_size
       - preprocessing.random_state
-      - preprocessing.input_path
-      - preprocessing.train_output_path
-      - preprocessing.test_output_path
     outs:
-      - data/processed_train.csv
-      - data/processed_test.csv
+      - data/processed_train.parquet
+      - data/processed_test.parquet
