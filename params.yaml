@@ -1,3 +1,8 @@
+features:
+  chi2percentile: 50
+  train_path: data/adult.data
+  test_path: data/adult.test
+
 preprocessing:
     test_size: 0.2
     random_state: 42

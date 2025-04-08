@@ -1,18 +1,4 @@
 stages:
-  prepare:
-    cmd: python labs/lab3/create_features.py
-    deps:
-      - labs/lab3/data/adult.data
-      - labs/lab3/data/adult.test
-      - labs/lab3/create_features.py
-    outs:
-      - labs/lab3/data/pipeline.pkl
-      - labs/lab3/data/processed_train_data.csv
-      - labs/lab3/data/processed_test_data.csv
-    params: 
-      - features.chi2percentile
-      - features.train_path
-      - features.test_path
   preprocess:
     cmd: python src/preprocessing.py
     deps:
@@ -21,6 +7,9 @@ stages:
     params:
       - preprocessing.test_size
       - preprocessing.random_state
+      - preprocessing.input_path
+      - preprocessing.train_output_path
+      - preprocessing.test_output_path
     outs:
       - data/processed_train.csv
       - data/processed_test.csv
