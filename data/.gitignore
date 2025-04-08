@@ -4,3 +4,5 @@
 /heart_df.parquet
 /processed_train.csv
 /processed_test.csv
+/processed_train.parquet
+/processed_test.parquet

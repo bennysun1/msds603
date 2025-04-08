@@ -27,3 +27,27 @@ stages:
       hash: md5
       md5: 93f35880ba4dafdd265ced0cf9b08977
       size: 7700627
+  prepare:
+    cmd: python src/preprocessing.py
+    deps:
+    - path: data/heart_df.parquet
+      hash: md5
+      md5: baaa1f3f6f2274348b2ba78c7aaa4417
+      size: 14170
+    - path: src/preprocessing.py
+      hash: md5
+      md5: 9674f91ca78aa0e0973891e6c4e02f28
+      size: 2052
+    params:
+      params.yaml:
+        preprocessing.random_state: 42
+        preprocessing.test_size: 0.2
+    outs:
+    - path: data/processed_test.parquet
+      hash: md5
+      md5: 0095aa554dff253d40e25a79ee5d6343
+      size: 19328
+    - path: data/processed_train.parquet
+      hash: md5
+      md5: 0cbe8b79e87c45bdafa78ab8c0226394
+      size: 27611
