@@ -1,86 +1,72 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 import yaml
-import os
 
-# Column names for the adult dataset
-COLUMNS = [
-    'age', 'workclass', 'fnlwgt', 'education', 'education-num',
-    'marital-status', 'occupation', 'relationship', 'race', 'sex',
-    'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income'
-]
-
-# Load parameters from params.yaml
+# Load parameters if using params.yaml
 try:
-    with open("params.yaml", 'r') as f:
-        params = yaml.safe_load(f)['preprocessing']
+    with open("params.yaml", "r") as f:
+        params = yaml.safe_load(f)["preprocessing"]
 except:
     params = {
-        'test_size': 0.2,
-        'random_state': 42,
-        'input_path': 'data/adult.data',
-        'train_output_path': 'data/processed_train.csv',
-        'test_output_path': 'data/processed_test.csv'
+        "test_size": 0.2,
+        "random_state": 42
     }
 
 def load_data(filepath):
-    """Load the raw dataset"""
-    # Read CSV without headers and assign column names
-    df = pd.read_csv(filepath, header=None, names=COLUMNS)
-    # Clean whitespace from string columns
-    object_columns = df.select_dtypes(include=['object']).columns
-    df[object_columns] = df[object_columns].apply(lambda x: x.str.strip())
-    return df
+    """Load the heart disease dataset"""
+    return pd.read_parquet(filepath)
 
 def preprocess_data(df):
-    """Preprocess the data"""
-    # Handle missing values (represented as '?')
-    df = df.replace('?', np.nan)
+    """Preprocess the heart disease data"""
+    # Create a copy to avoid modifying the original data
+    df = df.copy()
+    
+    # Handle any missing values if they exist
     df = df.dropna()
     
+    # Separate features and target
+    X = df.drop("HeartDisease", axis=1)
+    y = df["HeartDisease"]
+    
+    # Identify categorical and numerical columns
+    categorical_cols = X.select_dtypes(include=["object"]).columns
+    numerical_cols = X.select_dtypes(include=["int64", "float64"]).columns
+    
     # Convert categorical variables
-    categorical_columns = df.select_dtypes(include=['object']).columns
-    df = pd.get_dummies(df, columns=list(set(categorical_columns) - {'income'}))
+    X = pd.get_dummies(X, columns=categorical_cols)
     
     # Scale numerical features
     scaler = StandardScaler()
-    numerical_columns = ['age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week']
-    df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
+    X[numerical_cols] = scaler.fit_transform(X[numerical_cols])
     
-    return df
+    return X, y
 
-def split_and_save_data(df):
+def split_and_save_data(X, y):
     """Split the data and save train/test sets"""
-    # Clean target variable
-    df['income'] = df['income'].map({'>50K': 1, '<=50K': 0})
-    
-    X = df.drop('income', axis=1)
-    y = df['income']
-    
+    # Split the data
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, 
-        test_size=params['test_size'],
-        random_state=params['random_state']
+        X, y,
+        test_size=params["test_size"],
+        random_state=params["random_state"],
+        stratify=y
     )
     
-    # Save processed datasets
+    # Create DataFrames for saving
     train_data = pd.concat([X_train, y_train], axis=1)
     test_data = pd.concat([X_test, y_test], axis=1)
     
-    # Create data directory if it doesn't exist
-    os.makedirs(os.path.dirname(params['train_output_path']), exist_ok=True)
-    
-    train_data.to_csv(params['train_output_path'], index=False)
-    test_data.to_csv(params['test_output_path'], index=False)
+    # Save processed datasets
+    train_data.to_parquet("data/processed_train.parquet")
+    test_data.to_parquet("data/processed_test.parquet")
 
 if __name__ == "__main__":
     # Load raw data
-    raw_data = load_data(params['input_path'])
+    raw_data = load_data("data/heart_df.parquet")
     
     # Preprocess
-    processed_data = preprocess_data(raw_data)
+    X_processed, y = preprocess_data(raw_data)
     
     # Split and save
-    split_and_save_data(processed_data)
+    split_and_save_data(X_processed, y)
