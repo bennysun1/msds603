@@ -1,4 +1,5 @@
 from metaflow import FlowSpec, step, Flow, Parameter, JSONType
+import mlflow
 
 class ModelScoringFlow(FlowSpec):
     """Flow for making predictions using the trained model."""
@@ -14,12 +15,20 @@ class ModelScoringFlow(FlowSpec):
     @step
     def start(self):
         """
-        Starting point: Load the trained model.
-        Gets the best model from the latest training run.
+        Starting point: Load the trained model from MLFlow.
+        Gets the latest version of the registered model.
         """
-        run = Flow('ModelTrainingFlow').latest_run 
-        self.train_run_id = run.pathspec 
-        self.model = run['end'].task.data.model
+        # Set up MLFlow tracking
+        mlflow.set_tracking_uri('http://127.0.0.1:5000')
+        
+        # Load the model from MLFlow Model Registry
+        model_name = "wine-classifier"
+        model_version = 1  # You might want to make this a parameter
+        
+        self.model = mlflow.sklearn.load_model(
+            model_uri=f"models:/{model_name}/{model_version}"
+        )
+        
         print("Input vector:", self.vector)
         self.next(self.end)
 
