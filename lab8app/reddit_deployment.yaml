@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reddit-app
+  labels:
+    app: reddit-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: reddit-app
+  template:
+    metadata:
+      labels:
+        app: reddit-app
+    spec:
+      containers:
+      - name: reddit-app
+        image: us-west2-docker.pkg.dev/msds603-lab9/reddit-app/reddit-app:v1
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m" 
